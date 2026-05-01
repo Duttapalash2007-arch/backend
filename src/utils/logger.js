@@ -5,10 +5,11 @@ import { envConfig } from '../config/env.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const logsDir = path.join(__dirname, '../../logs');
+const isVercel = Boolean(process.env.VERCEL);
+const logsDir = isVercel ? null : path.join(__dirname, '../../logs');
 
 // Ensure logs directory exists
-if (!fs.existsSync(logsDir)) {
+if (logsDir && !fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
 
@@ -24,6 +25,10 @@ const getLogLevel = () => logLevels[envConfig.logLevel] || logLevels.info;
 const formatTimestamp = () => new Date().toISOString();
 
 const logToFile = (level, message, data = null) => {
+  if (!logsDir) {
+    return;
+  }
+
   const timestamp = formatTimestamp();
   const logMessage = `[${timestamp}] [${level.toUpperCase()}] ${message}${data ? ' ' + JSON.stringify(data) : ''}\n`;
   const logFile = path.join(logsDir, `${level}.log`);
