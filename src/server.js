@@ -10,7 +10,7 @@ let server;
 /**
  * Start server
  */
-/*const startServer = async () => {
+const startServer = async () => {
   try {
     logger.info('Connecting to MongoDB...');
     await connectDB();
@@ -22,40 +22,19 @@ let server;
     highRiskAlertJob();
     pendingReportReminderJob();
     logger.info('Scheduled jobs started');
-
-    server = app.listen(envConfig.port, () => {
-      logger.info(`Server running on port ${envConfig.port}`);
-      logger.info(`Environment: ${envConfig.nodeEnv}`);
-      logger.info('-----------------------------------');
-      logger.info('Healthcare Assistant Backend Ready');
-      logger.info('-----------------------------------');
-    });
   } catch (error) {
-    logger.error('Failed to start server:', error.message);
-    process.exit(1);
+    logger.error('MongoDB connection failed during startup:', error.message);
+    logger.warn('Server will start anyway; DB-backed routes will retry the connection on request.');
   }
-};*/
 
-let isConnected = false
-async function connectToMongoDB() {
-  try {
-    logger.info('Connecting to MongoDB...');
-    await connectDB();
-    logger.info('MongoDB connected');
-    isConnected = true;
-  } catch (error) {
-    logger.error('Failed to connect to MongoDB:', error.message);
-    setTimeout(connectToMongoDB, 5000); // Retry after 5 seconds
-  }
-}
-
-
-app.use((req, res, next) => {
-  if (!isConnected) {
-    connectToMongoDB();
-  }
-  next();
-});
+  server = app.listen(envConfig.port, () => {
+    logger.info(`Server running on port ${envConfig.port}`);
+    logger.info(`Environment: ${envConfig.nodeEnv}`);
+    logger.info('-----------------------------------');
+    logger.info('Healthcare Assistant Backend Ready');
+    logger.info('-----------------------------------');
+  });
+};
 
 /**
  * Handle process termination
@@ -93,6 +72,6 @@ process.on('unhandledRejection', (reason, promise) => {
   logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
+startServer();
 
-module.exports = app;
-// startServer();
+export default app;

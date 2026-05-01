@@ -4,7 +4,9 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import mongoose from 'mongoose';
 import { logger } from './utils/logger.js';
+import { connectDB } from './config/db.js';
 import { errorMiddleware, notFoundMiddleware } from './middlewares/error.middleware.js';
 
 // Import routes
@@ -17,6 +19,7 @@ import diseaseRoutes from './routes/disease.routes.js';
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+let mongoConnectionPromise = null;
 
 // ============= MIDDLEWARE =============
 
@@ -54,12 +57,41 @@ app.use((req, res, next) => {
 // ============= ROUTES =============
 
 // Health check
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    name: 'Healthcare Assistant API',
+    message: 'Backend is running',
+    docs: '/api',
+    health: '/health',
+  });
+});
+
 app.get('/health', (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Server is running',
     timestamp: new Date(),
   });
+});
+
+app.use(async (req, res, next) => {
+  if (['/', '/health', '/api'].includes(req.path)) {
+    return next();
+  }
+
+  if (mongoose.connection.readyState === 1) {
+    return next();
+  }
+
+  try {
+    mongoConnectionPromise = mongoConnectionPromise || connectDB();
+    await mongoConnectionPromise;
+    next();
+  } catch (error) {
+    mongoConnectionPromise = null;
+    next(error);
+  }
 });
 
 // API routes
